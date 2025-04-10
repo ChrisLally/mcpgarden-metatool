@@ -4,13 +4,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    env_file:
-      - .env
     restart: always
     ports:
       - '12005:3000'
     environment:
       - NODE_ENV=production
+      - DB_HOST=metatool-postgres
+      - DB_PORT=5432
+      - DB_NAME=metatool
+      - DB_USER=metatool
+      - DB_PASSWORD=m3t4t00l
     depends_on:
       - metatool-postgres
     extra_hosts:
@@ -41,8 +44,12 @@ services:
       dockerfile: Dockerfile
       target: migrator
     command: pnpm drizzle-kit migrate
-    env_file:
-      - .env
+    environment:
+      - DB_HOST=metatool-postgres
+      - DB_PORT=5432
+      - DB_NAME=metatool
+      - DB_USER=metatool
+      - DB_PASSWORD=m3t4t00l
     depends_on:
       metatool-postgres:
         condition: service_healthy
