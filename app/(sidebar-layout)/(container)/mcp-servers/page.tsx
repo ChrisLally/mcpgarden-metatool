@@ -93,7 +93,11 @@ export default function MCPServersPage() {
       header: 'Name',
     }),
     columnHelper.accessor('description', {
-      cell: (info) => info.getValue(),
+      cell: (info) => (
+        <div className="whitespace-normal break-words max-w-sm"> {/* Adjust max-w-* as needed */}
+          {info.getValue()}
+        </div>
+      ),
       header: 'Description',
     }),
     columnHelper.accessor('command', {
@@ -109,7 +113,11 @@ export default function MCPServersPage() {
       header: 'Type',
     }),
     columnHelper.accessor('url', {
-      cell: (info) => info.getValue() || '-',
+      cell: (info) => (
+        <div className="whitespace-normal break-all max-w-sm"> {/* Adjust max-w-* as needed */}
+          {info.getValue() || '-'}
+        </div>
+      ),
       header: 'URL',
     }),
     columnHelper.accessor('status', {
