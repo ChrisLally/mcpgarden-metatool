@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 
 import { createClient } from '@/utils/supabase/server';
-import { toolsTable } from '@/db/schema';
+
+import { authenticateApiKey } from '../auth';
+// import { toolsTable } from '@/db/schema'; // Commented out
 
 // Remove unused schema imports if not needed for types
 // import { mcpServersTable, toolsTable } from '@/db/schema';
-import { authenticateApiKey } from '../auth';
 
 export async function POST(request: Request) {
   try {
