@@ -8,70 +8,22 @@ import { createClient } from '@/utils/supabase/server';
 // import { profilesTable, projectsTable } from '@/db/schema';
 
 export async function createProject(name: string) {
-  // Note: Supabase client doesn't support transactions like Drizzle.
-  // This is refactored as sequential operations. Consider using a DB function (RPC) for atomicity.
   const supabase = await createClient();
 
-  // Get current user
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    console.error("Error getting user:", userError);
-    throw new Error('User not authenticated');
-  }
-  const userId = user.id;
+  // Call the RPC function to handle project creation atomically
+  const { data: project, error } = await supabase
+    .rpc('create_new_project', { project_name: name })
+    .select() // Select the columns returned by the function
+    .single(); // Expect a single row representing the new project
 
-  // 1. Create the project
-  const { data: project, error: projectError } = await supabase
-    .from('projects')
-    .insert({ name, active_profile_uuid: null }) // Insert with null profile initially
-    .select()
-    .single();
-
-  if (projectError || !project) {
-    console.error("Error creating project:", projectError);
-    throw new Error('Failed to create project');
+  if (error || !project) {
+    console.error("Error calling create_new_project RPC:", error);
+    // The RPC function handles internal errors, but the call itself might fail (e.g., network, permissions on RPC)
+    throw new Error(`Failed to create project using RPC: ${error?.message || 'Unknown error'}`);
   }
 
-  // 2. Create the default profile
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .insert({ name: 'Default Workspace', project_uuid: project.uuid })
-    .select()
-    .single();
-
-  if (profileError || !profile) {
-    console.error("Error creating default profile:", profileError);
-    // Attempt to clean up the created project if profile creation fails? (Complex without transactions)
-    // For now, just throw an error.
-    throw new Error('Failed to create default profile for project');
-  }
-
-  // 3. Update the project with the profile UUID
-  const { data: updatedProject, error: updateError } = await supabase
-    .from('projects')
-    .update({ active_profile_uuid: profile.uuid })
-    .eq('uuid', project.uuid)
-    .select()
-    .single();
-
-  if (updateError || !updatedProject) {
-    console.error("Error updating project with profile UUID:", updateError);
-    // Attempt cleanup?
-    throw new Error('Failed to link profile to project');
-  }
-
-  // 4. Link user to the project in the junction table
-  const { error: linkError } = await supabase
-    .from('users_projects') // Use the correct junction table name
-    .insert({ user_uuid: userId, project_uuid: project.uuid }); // Corrected column name
-
-  if (linkError) {
-    console.error("Error linking user to project:", linkError);
-    // Attempt cleanup?
-    throw new Error('Failed to link user to project');
-  }
-
-  return updatedProject;
+  // The RPC function returns the created project details
+  return project;
 }
 
 export async function getProject(projectUuid: string) {
