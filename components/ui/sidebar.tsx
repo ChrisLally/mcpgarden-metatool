@@ -392,18 +392,19 @@ const SidebarFooter = React.forwardRef<
     };
   }, [supabase]);
 
-  const handleLogin = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'github',
-      options: {
-        redirectTo: location.origin + '/api/auth/callback', // Adjust if your callback route is different
-      },
-    });
-  };
+  // const handleLogin = async () => {
+  //   await supabase.auth.signInWithOAuth({
+  //     provider: 'github',
+  //     options: {
+  //       redirectTo: location.origin + '/api/auth/callback', // Adjust if your callback route is different
+  //     },
+  //   });
+  // };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    // router.push('/login');
     router.refresh(); // Refresh the page to reflect logout state
   };
 
@@ -425,8 +426,8 @@ const SidebarFooter = React.forwardRef<
             </Button>
           </>
         ) : (
-          <Button variant='ghost' size='sm' className='w-full justify-start gap-2 px-2' onClick={handleLogin}>
-            <LogIn size={16} /> Login with GitHub
+          <Button variant='ghost' size='sm' className='w-full justify-start gap-2 px-2' onClick={() => router.push('/login')}>
+            <LogIn size={16} /> Login
           </Button>
         )}
       </div>
@@ -445,10 +446,10 @@ const SidebarFooter = React.forwardRef<
         ) : (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant='ghost' size='icon' className='size-8' onClick={handleLogin}>
+              {/* <Button variant='ghost' size='icon' className='size-8' onClick={handleLogin}>
                 <LogIn size={16} />
                 <span className='sr-only'>Login with GitHub</span>
-              </Button>
+              </Button> */}
             </TooltipTrigger>
             <TooltipContent side='right' align='center'>Login with GitHub</TooltipContent>
           </Tooltip>

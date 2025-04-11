@@ -43,7 +43,8 @@ ALTER TYPE "public"."mcp_server_type" OWNER TO "postgres";
 
 
 CREATE TYPE "public"."profile_capability" AS ENUM (
-    'TOOLS_MANAGEMENT'
+    'TOOLS_MANAGEMENT',
+    'TOOL_LOGS'
 );
 
 
@@ -148,7 +149,7 @@ ALTER TABLE "public"."mcp_servers" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "uuid" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "name" "text" NOT NULL,
-    "project_uuid" "uuid" NOT NULL,
+    "project_uuid" "uuid",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "enabled_capabilities" "public"."profile_capability"[] DEFAULT '{}'::"public"."profile_capability"[] NOT NULL
 );
@@ -356,7 +357,7 @@ CREATE INDEX "tools_mcp_server_uuid_idx" ON "public"."tools" USING "btree" ("mcp
 
 
 ALTER TABLE ONLY "public"."api_keys"
-    ADD CONSTRAINT "api_keys_project_uuid_projects_uuid_fk" FOREIGN KEY ("project_uuid") REFERENCES "public"."projects"("uuid");
+    ADD CONSTRAINT "api_keys_project_uuid_fkey" FOREIGN KEY ("project_uuid") REFERENCES "public"."projects"("uuid") ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 
@@ -371,7 +372,7 @@ ALTER TABLE ONLY "public"."custom_mcp_servers"
 
 
 ALTER TABLE ONLY "public"."mcp_servers"
-    ADD CONSTRAINT "mcp_servers_profile_uuid_profiles_uuid_fk" FOREIGN KEY ("profile_uuid") REFERENCES "public"."profiles"("uuid");
+    ADD CONSTRAINT "mcp_servers_profile_uuid_fkey" FOREIGN KEY ("profile_uuid") REFERENCES "public"."profiles"("uuid") ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 
@@ -386,17 +387,17 @@ ALTER TABLE ONLY "public"."projects"
 
 
 ALTER TABLE ONLY "public"."tool_execution_logs"
-    ADD CONSTRAINT "tool_execution_logs_mcp_server_uuid_fkey" FOREIGN KEY ("mcp_server_uuid") REFERENCES "public"."mcp_servers"("uuid");
+    ADD CONSTRAINT "tool_execution_logs_mcp_server_uuid_fkey" FOREIGN KEY ("mcp_server_uuid") REFERENCES "public"."mcp_servers"("uuid") ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY "public"."tools"
-    ADD CONSTRAINT "tools_mcp_server_uuid_mcp_servers_uuid_fk" FOREIGN KEY ("mcp_server_uuid") REFERENCES "public"."mcp_servers"("uuid") ON DELETE CASCADE;
+    ADD CONSTRAINT "tools_mcp_server_uuid_fkey" FOREIGN KEY ("mcp_server_uuid") REFERENCES "public"."mcp_servers"("uuid") ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY "public"."users_projects"
-    ADD CONSTRAINT "users_projects_project_uuid_fkey" FOREIGN KEY ("project_uuid") REFERENCES "public"."projects"("uuid") ON DELETE CASCADE;
+    ADD CONSTRAINT "users_projects_project_uuid_fkey" FOREIGN KEY ("project_uuid") REFERENCES "public"."projects"("uuid") ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 
@@ -406,6 +407,22 @@ ALTER TABLE ONLY "public"."users_projects"
 
 
 CREATE POLICY "Allow authenticated users to insert codes" ON "public"."codes" FOR INSERT WITH CHECK (("auth"."role"() = 'authenticated'::"text"));
+
+
+
+CREATE POLICY "Allow member delete access to projects" ON "public"."projects" FOR DELETE USING ("public"."is_project_member"("uuid", "auth"."uid"()));
+
+
+
+CREATE POLICY "Allow member select access to projects" ON "public"."projects" FOR SELECT USING ("public"."is_project_member"("uuid", "auth"."uid"()));
+
+
+
+CREATE POLICY "Allow member update access to projects" ON "public"."projects" FOR UPDATE USING ("public"."is_project_member"("uuid", "auth"."uid"()));
+
+
+
+CREATE POLICY "Allow project creation for authenticated users" ON "public"."projects" FOR INSERT TO "authenticated" WITH CHECK (true);
 
 
 
@@ -453,10 +470,6 @@ CREATE POLICY "Allow user CRUD access based on project membership via profile" O
 
 
 
-CREATE POLICY "Allow user CRUD access based on users_projects" ON "public"."projects" USING ("public"."is_project_member"("uuid", "auth"."uid"())) WITH CHECK ("public"."is_project_member"("uuid", "auth"."uid"()));
-
-
-
 CREATE POLICY "Allow user delete if used by accessible custom server" ON "public"."codes" FOR DELETE USING ((EXISTS ( SELECT 1
    FROM ("public"."custom_mcp_servers" "cms"
      JOIN "public"."profiles" "p" ON (("cms"."profile_uuid" = "p"."uuid")))
@@ -492,9 +505,6 @@ ALTER TABLE "public"."custom_mcp_servers" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."mcp_servers" ENABLE ROW LEVEL SECURITY;
-
-
-ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."projects" ENABLE ROW LEVEL SECURITY;
